@@ -187,20 +187,61 @@ router.get("/run-details", async (req: Request, res: Response) => {
     // Получаем события для дополнительной информации
     const events = await getAutomationEvents(runId, 100);
     
+    // Конвертируем Timestamp в ISO строки
+    const convertTimestamp = (ts: any): string | null => {
+      if (!ts) return null;
+      if (ts.toDate && typeof ts.toDate === 'function') {
+        return ts.toDate().toISOString();
+      }
+      if (ts instanceof Date) {
+        return ts.toISOString();
+      }
+      if (typeof ts === 'number') {
+        return new Date(ts).toISOString();
+      }
+      return null;
+    };
+    
+    // Конвертируем channels и tasks
+    const channelsDTO = (run.channels || []).map((ch: any) => ({
+      ...ch,
+      details: {
+        ...ch.details,
+        now: ch.details?.now ? convertTimestamp(ch.details.now) : null,
+        lastRunAt: ch.details?.lastRunAt ? convertTimestamp(ch.details.lastRunAt) : null,
+      },
+    }));
+    
+    const tasksDTO = (run.tasks || []).map((task: any) => ({
+      ...task,
+      createdAt: task.createdAt ? convertTimestamp(task.createdAt) : null,
+    }));
+    
+    const eventsDTO = events.map((event) => ({
+      runId: event.runId,
+      createdAt: event.createdAt.toDate().toISOString(),
+      level: event.level,
+      step: event.step,
+      channelId: event.channelId || null,
+      channelName: event.channelName || null,
+      message: event.message,
+      details: event.details || null,
+    }));
+    
     res.json({
       runId: run.id,
-      startedAt: run.startedAt,
-      finishedAt: run.finishedAt,
+      startedAt: convertTimestamp(run.startedAt),
+      finishedAt: convertTimestamp(run.finishedAt),
       status: run.status,
       channelsPlanned: run.channelsPlanned,
       channelsProcessed: run.channelsProcessed,
       jobsCreated: run.jobsCreated,
       errorsCount: run.errorsCount,
-      lastErrorMessage: run.lastErrorMessage,
+      lastErrorMessage: run.lastErrorMessage || null,
       timezone: run.timezone,
-      channels: run.channels || [],
-      tasks: run.tasks || [],
-      events: events,
+      channels: channelsDTO,
+      tasks: tasksDTO,
+      events: eventsDTO,
     });
   } catch (error: any) {
     console.error("[AutomationDebug] Error getting run details:", error);

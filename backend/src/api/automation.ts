@@ -630,12 +630,42 @@ router.post("/channels/:channelId/run-now", async (req: Request, res: Response) 
     }
     
     // Запускаем автоматизацию (игнорируя проверку времени/дней недели)
-    const jobId = await createAutomatedJob(channel);
+    let jobId: string | null = null;
+    try {
+      jobId = await createAutomatedJob(channel);
+    } catch (createError: any) {
+      console.error(`[Automation] ❌ Error in createAutomatedJob for channel ${channelId}:`, createError);
+      console.error(`[Automation] Error stack:`, createError.stack);
+      
+      // Убеждаемся, что флаг isRunning сброшен
+      try {
+        const { updateChannel } = await import("../models/channel");
+        const currentChannel = await getChannelById(channelId);
+        if (currentChannel?.automation?.isRunning) {
+          await updateChannel(channelId, {
+            automation: {
+              ...currentChannel.automation,
+              isRunning: false,
+              runId: null,
+            },
+          });
+          console.log(`[Automation] ✅ Reset isRunning flag after error for channel ${channelId}`);
+        }
+      } catch (resetError: any) {
+        console.error(`[Automation] ⚠️ Failed to reset isRunning flag:`, resetError);
+      }
+      
+      return res.status(500).json({
+        error: "Ошибка при создании задачи автоматизации",
+        message: createError.message || String(createError),
+        details: createError.stack ? createError.stack.substring(0, 500) : undefined,
+      });
+    }
     
     if (!jobId) {
       return res.status(500).json({
         error: "Не удалось создать задачу автоматизации",
-        message: "Возможно, достигнут лимит активных задач",
+        message: "Возможно, достигнут лимит активных задач или произошла ошибка при генерации",
       });
     }
     
@@ -649,10 +679,31 @@ router.post("/channels/:channelId/run-now", async (req: Request, res: Response) 
       channelName: channel.name,
     });
   } catch (error: any) {
-    console.error(`[Automation] Error in manual run for channel ${req.params.channelId}:`, error);
+    console.error(`[Automation] ❌ Error in manual run for channel ${req.params.channelId}:`, error);
+    console.error(`[Automation] Error stack:`, error.stack);
+    
+    // Убеждаемся, что флаг isRunning сброшен
+    try {
+      const { updateChannel } = await import("../models/channel");
+      const currentChannel = await getChannelById(req.params.channelId);
+      if (currentChannel?.automation?.isRunning) {
+        await updateChannel(req.params.channelId, {
+          automation: {
+            ...currentChannel.automation,
+            isRunning: false,
+            runId: null,
+          },
+        });
+        console.log(`[Automation] ✅ Reset isRunning flag after error for channel ${req.params.channelId}`);
+      }
+    } catch (resetError: any) {
+      console.error(`[Automation] ⚠️ Failed to reset isRunning flag:`, resetError);
+    }
+    
     res.status(500).json({
       error: "Ошибка при запуске автоматизации",
-      message: error.message,
+      message: error.message || String(error),
+      details: error.stack ? error.stack.substring(0, 500) : undefined,
     });
   }
 });
