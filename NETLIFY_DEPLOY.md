@@ -96,3 +96,4 @@ npm run build
 2. Проверьте CORS настройки на backend
 3. Проверьте, что backend доступен по указанному URL
 
+

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import '../App.css'
-import { apiFetch, apiFetchJson, ApiError } from '../lib/apiClient'
+import { apiFetch, apiFetchJson, ApiError, resolveApiUrl } from '../lib/apiClient'
 import { useToast } from '../hooks/useToast'
 import { ToastContainer } from './Toast'
 
@@ -49,6 +49,7 @@ const ChannelSettings: React.FC = () => {
   const [showLogs, setShowLogs] = useState(false)
   const [channelLogs, setChannelLogs] = useState<any[]>([])
   const [loadingLogs, setLoadingLogs] = useState(false)
+  const [isRunningNow, setIsRunningNow] = useState(false) // Флаг для защиты от повторных запросов
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -583,14 +584,37 @@ const ChannelSettings: React.FC = () => {
                       <button
                         type="button"
                         onClick={async () => {
-                          if (!editingId) return;
+                          if (!editingId || isRunningNow) return; // Защита от повторных кликов
+                          setIsRunningNow(true);
                           setLoading(true);
                           setError('');
+                          setSuccess('');
                           try {
-                            const result = await apiFetchJson<{ success: boolean; jobId: string; message: string }>(
-                              `/api/automation/channels/${editingId}/run-now`,
-                              { method: 'POST' }
+                            // Используем fetch напрямую без retry для этого эндпоинта
+                            const url = resolveApiUrl(`/api/automation/channels/${editingId}/run-now`);
+                            const response = await fetch(
+                              url,
+                              { 
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' }
+                              }
                             );
+                            
+                            if (!response.ok) {
+                              let errorBody: any = null;
+                              try {
+                                errorBody = await response.json();
+                              } catch {
+                                errorBody = { error: `Ошибка ${response.status}` };
+                              }
+                              throw new ApiError(
+                                errorBody.error || errorBody.message || `Ошибка ${response.status}`,
+                                response.status,
+                                errorBody
+                              );
+                            }
+                            
+                            const result = await response.json() as { success: boolean; jobId: string; message: string };
                             setSuccess(result.message || 'Автоматизация запущена. Новые задачи появятся в истории генераций.');
                             // Обновляем данные канала
                             setTimeout(() => {
@@ -606,12 +630,14 @@ const ChannelSettings: React.FC = () => {
                               }
                             }, 1000);
                           } catch (err) {
+                            console.error('[ChannelSettings] Error running automation:', err);
                             setError(getErrorMessage(err));
                           } finally {
                             setLoading(false);
+                            setIsRunningNow(false);
                           }
                         }}
-                        disabled={loading || formData.automation.isRunning}
+                        disabled={loading || formData.automation.isRunning || isRunningNow}
                         style={{
                           padding: '8px 16px',
                           backgroundColor: '#4CAF50',
@@ -627,7 +653,7 @@ const ChannelSettings: React.FC = () => {
                       }}
                     >
                       <span>▶</span>
-                      <span>{loading ? 'Запускаем...' : 'Запустить сейчас'}</span>
+                      <span>{loading || isRunningNow ? 'Запускаем...' : 'Запустить сейчас'}</span>
                     </button>
                     )}
                     
