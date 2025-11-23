@@ -175,79 +175,178 @@ router.get("/run-details", async (req: Request, res: Response) => {
       });
     }
     
+    console.log(`[AutomationDebug] Getting run details for runId: ${runId}`);
+    
     const { getAutomationRun, getAutomationEvents } = await import("../firebase/automationRunsService");
     
     const run = await getAutomationRun(runId);
     if (!run) {
+      console.log(`[AutomationDebug] Run ${runId} not found`);
       return res.status(404).json({
         error: "Запуск не найден",
       });
     }
     
+    console.log(`[AutomationDebug] Run found: ${run.id}, status: ${run.status}`);
+    
     // Получаем события для дополнительной информации
-    const events = await getAutomationEvents(runId, 100);
+    let events: any[] = [];
+    try {
+      events = await getAutomationEvents(runId, 100);
+      console.log(`[AutomationDebug] Found ${events.length} events`);
+    } catch (eventsError: any) {
+      console.error(`[AutomationDebug] Error getting events:`, eventsError);
+      // Продолжаем без событий, это не критично
+    }
     
     // Конвертируем Timestamp в ISO строки
     const convertTimestamp = (ts: any): string | null => {
-      if (!ts) return null;
-      if (ts.toDate && typeof ts.toDate === 'function') {
-        return ts.toDate().toISOString();
+      try {
+        if (!ts) return null;
+        if (ts.toDate && typeof ts.toDate === 'function') {
+          return ts.toDate().toISOString();
+        }
+        if (ts instanceof Date) {
+          return ts.toISOString();
+        }
+        if (typeof ts === 'number') {
+          return new Date(ts).toISOString();
+        }
+        // Если это объект Firestore Timestamp
+        if (ts.seconds !== undefined && ts.nanoseconds !== undefined) {
+          return new Date(ts.seconds * 1000 + ts.nanoseconds / 1000000).toISOString();
+        }
+        return null;
+      } catch (err: any) {
+        console.warn(`[AutomationDebug] Error converting timestamp:`, err);
+        return null;
       }
-      if (ts instanceof Date) {
-        return ts.toISOString();
-      }
-      if (typeof ts === 'number') {
-        return new Date(ts).toISOString();
-      }
-      return null;
     };
     
-    // Конвертируем channels и tasks
-    const channelsDTO = (run.channels || []).map((ch: any) => ({
-      ...ch,
-      details: {
-        ...ch.details,
-        now: ch.details?.now ? convertTimestamp(ch.details.now) : null,
-        lastRunAt: ch.details?.lastRunAt ? convertTimestamp(ch.details.lastRunAt) : null,
-      },
-    }));
+    // Безопасно конвертируем channels
+    let channelsDTO: any[] = [];
+    try {
+      if (Array.isArray(run.channels)) {
+        channelsDTO = run.channels.map((ch: any) => {
+          try {
+            return {
+              channelId: ch.channelId || null,
+              channelName: ch.channelName || null,
+              auto: ch.auto ?? false,
+              shouldRunNow: ch.shouldRunNow ?? false,
+              reason: ch.reason || 'unknown',
+              details: {
+                ...(ch.details || {}),
+                now: ch.details?.now ? convertTimestamp(ch.details.now) : ch.details?.now || null,
+                lastRunAt: ch.details?.lastRunAt ? convertTimestamp(ch.details.lastRunAt) : ch.details?.lastRunAt || null,
+                targetTime: ch.details?.targetTime || null,
+                timeMatched: ch.details?.timeMatched ?? null,
+                dayMatched: ch.details?.dayMatched ?? null,
+                minutesSinceLastRun: ch.details?.minutesSinceLastRun ?? null,
+                frequencyLimit: ch.details?.frequencyLimit ?? null,
+                timezone: ch.details?.timezone || null,
+              },
+            };
+          } catch (chErr: any) {
+            console.warn(`[AutomationDebug] Error processing channel ${ch.channelId}:`, chErr);
+            return {
+              channelId: ch.channelId || null,
+              channelName: ch.channelName || null,
+              error: 'Error processing channel data',
+            };
+          }
+        });
+      }
+    } catch (channelsError: any) {
+      console.error(`[AutomationDebug] Error processing channels:`, channelsError);
+      channelsDTO = [];
+    }
     
-    const tasksDTO = (run.tasks || []).map((task: any) => ({
-      ...task,
-      createdAt: task.createdAt ? convertTimestamp(task.createdAt) : null,
-    }));
+    // Безопасно конвертируем tasks
+    let tasksDTO: any[] = [];
+    try {
+      if (Array.isArray(run.tasks)) {
+        tasksDTO = run.tasks.map((task: any) => {
+          try {
+            return {
+              taskId: task.taskId || null,
+              channelId: task.channelId || null,
+              channelName: task.channelName || null,
+              status: task.status || 'unknown',
+              error: task.error || null,
+              createdAt: task.createdAt ? convertTimestamp(task.createdAt) : null,
+            };
+          } catch (taskErr: any) {
+            console.warn(`[AutomationDebug] Error processing task ${task.taskId}:`, taskErr);
+            return {
+              taskId: task.taskId || null,
+              error: 'Error processing task data',
+            };
+          }
+        });
+      }
+    } catch (tasksError: any) {
+      console.error(`[AutomationDebug] Error processing tasks:`, tasksError);
+      tasksDTO = [];
+    }
     
-    const eventsDTO = events.map((event) => ({
-      runId: event.runId,
-      createdAt: event.createdAt.toDate().toISOString(),
-      level: event.level,
-      step: event.step,
-      channelId: event.channelId || null,
-      channelName: event.channelName || null,
-      message: event.message,
-      details: event.details || null,
-    }));
+    // Безопасно конвертируем events
+    const eventsDTO = events.map((event: any) => {
+      try {
+        let createdAt: string | null = null;
+        if (event.createdAt) {
+          if (event.createdAt.toDate && typeof event.createdAt.toDate === 'function') {
+            createdAt = event.createdAt.toDate().toISOString();
+          } else {
+            createdAt = convertTimestamp(event.createdAt);
+          }
+        }
+        
+        return {
+          runId: event.runId || null,
+          createdAt: createdAt,
+          level: event.level || 'info',
+          step: event.step || 'other',
+          channelId: event.channelId || null,
+          channelName: event.channelName || null,
+          message: event.message || '',
+          details: event.details || null,
+        };
+      } catch (eventErr: any) {
+        console.warn(`[AutomationDebug] Error processing event:`, eventErr);
+        return {
+          runId: event.runId || null,
+          error: 'Error processing event data',
+        };
+      }
+    });
     
-    res.json({
-      runId: run.id,
+    const response = {
+      runId: run.id || null,
       startedAt: convertTimestamp(run.startedAt),
       finishedAt: convertTimestamp(run.finishedAt),
-      status: run.status,
-      channelsPlanned: run.channelsPlanned,
-      channelsProcessed: run.channelsProcessed,
-      jobsCreated: run.jobsCreated,
-      errorsCount: run.errorsCount,
+      status: run.status || 'unknown',
+      channelsPlanned: run.channelsPlanned ?? 0,
+      channelsProcessed: run.channelsProcessed ?? 0,
+      jobsCreated: run.jobsCreated ?? 0,
+      errorsCount: run.errorsCount ?? 0,
       lastErrorMessage: run.lastErrorMessage || null,
-      timezone: run.timezone,
+      timezone: run.timezone || 'Asia/Almaty',
       channels: channelsDTO,
       tasks: tasksDTO,
       events: eventsDTO,
-    });
+    };
+    
+    console.log(`[AutomationDebug] ✅ Successfully prepared response for run ${runId}`);
+    
+    res.json(response);
   } catch (error: any) {
-    console.error("[AutomationDebug] Error getting run details:", error);
+    console.error("[AutomationDebug] ❌ Error getting run details:", error);
+    console.error("[AutomationDebug] Error stack:", error.stack);
     res.status(500).json({
       error: "Ошибка при получении деталей запуска",
-      message: error.message,
+      message: error.message || String(error),
+      details: error.stack ? error.stack.substring(0, 500) : undefined,
     });
   }
 });
