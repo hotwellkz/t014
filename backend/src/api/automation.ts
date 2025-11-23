@@ -626,7 +626,8 @@ router.post("/channels/:channelId/run-now", async (req: Request, res: Response) 
     }, null, 2));
     
     // Нормализуем enabled (может быть строкой "true" из Firestore)
-    const automationEnabled = channel.automation?.enabled === true || channel.automation?.enabled === "true";
+    const enabledValue: any = channel.automation?.enabled;
+    const automationEnabled = enabledValue === true || (typeof enabledValue === 'string' && (enabledValue === "true" || enabledValue === "1"));
     
     // Проверяем, включена ли автоматизация
     if (!channel.automation || !automationEnabled) {
@@ -643,7 +644,7 @@ router.post("/channels/:channelId/run-now", async (req: Request, res: Response) 
     }
     
     // Проверяем, не выполняется ли уже автоматизация
-    if (channel.automation.isRunning) {
+    if (channel.automation.isRunning === true) {
       console.log(`[Automation] ❌ Automation already running for channel ${channelId}`);
       console.log(`[Automation] isRunning: ${channel.automation.isRunning}, runId: ${channel.automation.runId}`);
       return res.status(400).json({
