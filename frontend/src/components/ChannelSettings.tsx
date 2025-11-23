@@ -629,6 +629,132 @@ const ChannelSettings: React.FC = () => {
                       <span>▶</span>
                       <span>{loading ? 'Запускаем...' : 'Запустить сейчас'}</span>
                     </button>
+                    )}
+                    
+                    {/* Кнопка показать лог */}
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (!editingId) return;
+                        setLoadingLogs(true);
+                        try {
+                          const result = await apiFetchJson<{ events: any[]; count: number }>(
+                            `/api/automation/debug/channel-logs?channelId=${editingId}&limit=20`
+                          );
+                          setChannelLogs(result.events || []);
+                          setShowLogs(true);
+                        } catch (err) {
+                          console.error('[ChannelSettings] Error loading logs:', err);
+                          toast.error('Не удалось загрузить логи');
+                        } finally {
+                          setLoadingLogs(false);
+                        }
+                      }}
+                      disabled={loadingLogs}
+                      style={{
+                        padding: '8px 16px',
+                        backgroundColor: '#667eea',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        cursor: loadingLogs ? 'not-allowed' : 'pointer',
+                        fontSize: '14px',
+                        fontWeight: '500',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '8px',
+                        opacity: loadingLogs ? 0.6 : 1,
+                      }}
+                    >
+                      {loadingLogs ? '⏳' : '📋'} Показать лог
+                    </button>
+                  </div>
+                )}
+                
+                {/* Модальное окно с логами */}
+                {showLogs && editingId && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px',
+                  }} onClick={() => setShowLogs(false)}>
+                    <div style={{
+                      backgroundColor: 'white',
+                      borderRadius: '8px',
+                      padding: '24px',
+                      maxWidth: '800px',
+                      maxHeight: '80vh',
+                      overflow: 'auto',
+                      width: '100%',
+                    }} onClick={(e) => e.stopPropagation()}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                        <h3 style={{ margin: 0 }}>Логи автоматизации</h3>
+                        <button
+                          onClick={() => setShowLogs(false)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            color: '#666',
+                          }}
+                        >
+                          ×
+                        </button>
+                      </div>
+                      
+                      {channelLogs.length === 0 ? (
+                        <p style={{ color: '#666' }}>Логи не найдены</p>
+                      ) : (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                          {channelLogs.map((event, idx) => (
+                            <div
+                              key={idx}
+                              style={{
+                                padding: '12px',
+                                borderRadius: '4px',
+                                backgroundColor: event.level === 'error' ? '#fee2e2' : event.level === 'warn' ? '#fef3c7' : '#f0f9ff',
+                                borderLeft: `4px solid ${event.level === 'error' ? '#ef4444' : event.level === 'warn' ? '#f59e0b' : '#3b82f6'}`,
+                              }}
+                            >
+                              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                <span style={{ fontWeight: '500', fontSize: '14px' }}>
+                                  {event.createdAt ? new Date(event.createdAt).toLocaleString('ru-RU') : 'N/A'}
+                                </span>
+                                <span style={{
+                                  fontSize: '12px',
+                                  padding: '2px 8px',
+                                  borderRadius: '4px',
+                                  backgroundColor: event.level === 'error' ? '#ef4444' : event.level === 'warn' ? '#f59e0b' : '#3b82f6',
+                                  color: 'white',
+                                }}>
+                                  {event.level || 'info'}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '13px', color: '#333', marginBottom: '4px' }}>
+                                <strong>Шаг:</strong> {event.step || 'other'} | <strong>Сообщение:</strong> {event.message || 'N/A'}
+                              </div>
+                              {event.details && (
+                                <details style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                                  <summary style={{ cursor: 'pointer' }}>Детали</summary>
+                                  <pre style={{ marginTop: '8px', padding: '8px', backgroundColor: '#f5f5f5', borderRadius: '4px', overflow: 'auto' }}>
+                                    {JSON.stringify(event.details, null, 2)}
+                                  </pre>
+                                </details>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 )}
                 
