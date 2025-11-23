@@ -81,9 +81,22 @@ export async function getChannelById(id: string): Promise<Channel | undefined> {
       return undefined;
     }
 
+    const data = doc.data();
+    if (!data) {
+      return undefined;
+    }
+
+    // Нормализуем automation.enabled (может быть строкой "true"/"false" или boolean)
+    if (data.automation && typeof data.automation === 'object') {
+      const automation = data.automation as any;
+      if (automation.enabled !== undefined) {
+        automation.enabled = automation.enabled === true || automation.enabled === 'true' || automation.enabled === '1';
+      }
+    }
+
     return {
       id: doc.id,
-      ...doc.data(),
+      ...data,
     } as Channel;
   } catch (error: unknown) {
     console.error(`[Firebase] Error getting channel ${id}:`, error);
