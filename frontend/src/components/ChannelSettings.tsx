@@ -20,6 +20,10 @@ interface ChannelAutomation {
   isRunning?: boolean
   runId?: string | null
   manualStoppedAt?: number | null
+  status?: 'idle' | 'running' | 'success' | 'error'
+  statusMessage?: string | null
+  lastStatusAt?: number | null
+  currentStep?: string | null
 }
 
 interface Channel {
@@ -385,12 +389,17 @@ const ChannelSettings: React.FC = () => {
             {/* Статус автоматизации */}
             {formData.automation.enabled && (
               <div className="automation-status">
-                {formData.automation.isRunning ? (
-                  <div className="automation-status__running" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span className="automation-status__indicator automation-status__indicator--running"></span>
-                      <span className="automation-status__text">Автоматизация выполняется...</span>
-                    </div>
+                {formData.automation.isRunning || formData.automation.status === 'running' ? (
+                  <div className="automation-status__running" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span className="automation-status__indicator automation-status__indicator--running"></span>
+                        <span className="automation-status__text">
+                          {formData.automation.currentStep 
+                            ? `Автоматизация: ${formData.automation.currentStep}`
+                            : formData.automation.statusMessage || 'Автоматизация выполняется...'}
+                        </span>
+                      </div>
                     <button
                       type="button"
                       onClick={async () => {
@@ -503,6 +512,41 @@ const ChannelSettings: React.FC = () => {
                         </>
                       )}
                     </button>
+                    </div>
+                  </div>
+                ) : formData.automation.status === 'success' ? (
+                  <div className="automation-status__idle" style={{ backgroundColor: '#d1fae5', border: '1px solid #10b981', borderRadius: '4px', padding: '8px 12px' }}>
+                    <span className="automation-status__indicator" style={{ backgroundColor: '#10b981' }}></span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span className="automation-status__text" style={{ fontWeight: '500' }}>✅ Успешно</span>
+                      {formData.automation.statusMessage && (
+                        <span className="automation-status__text" style={{ fontSize: '0.875rem', color: '#065f46' }}>
+                          {formData.automation.statusMessage}
+                        </span>
+                      )}
+                      {formData.automation.lastStatusAt && (
+                        <span className="automation-status__text" style={{ fontSize: '0.75rem', color: '#047857' }}>
+                          {new Date(formData.automation.lastStatusAt).toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ) : formData.automation.status === 'error' ? (
+                  <div className="automation-status__idle" style={{ backgroundColor: '#fee2e2', border: '1px solid #ef4444', borderRadius: '4px', padding: '8px 12px' }}>
+                    <span className="automation-status__indicator" style={{ backgroundColor: '#ef4444' }}></span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span className="automation-status__text" style={{ fontWeight: '500', color: '#991b1b' }}>❌ Ошибка</span>
+                      {formData.automation.statusMessage && (
+                        <span className="automation-status__text" style={{ fontSize: '0.875rem', color: '#991b1b' }}>
+                          {formData.automation.statusMessage}
+                        </span>
+                      )}
+                      {formData.automation.lastStatusAt && (
+                        <span className="automation-status__text" style={{ fontSize: '0.75rem', color: '#7f1d1d' }}>
+                          {new Date(formData.automation.lastStatusAt).toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 ) : formData.automation.manualStoppedAt ? (
                   <div className="automation-status__idle" style={{ backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '4px', padding: '8px 12px' }}>
@@ -512,7 +556,19 @@ const ChannelSettings: React.FC = () => {
                 ) : (
                   <div className="automation-status__idle">
                     <span className="automation-status__indicator automation-status__indicator--idle"></span>
-                    <span className="automation-status__text">Автоматизация включена. Ожидаем следующего запуска.</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                      <span className="automation-status__text">Автоматизация включена. Ожидаем следующего запуска.</span>
+                      {formData.automation.nextRunAt && (
+                        <span className="automation-status__text" style={{ fontSize: '0.875rem', color: '#718096' }}>
+                          Следующий запуск: {new Date(formData.automation.nextRunAt).toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                      {formData.automation.lastRunAt && (
+                        <span className="automation-status__text" style={{ fontSize: '0.875rem', color: '#718096' }}>
+                          Последний запуск: {new Date(formData.automation.lastRunAt).toLocaleString('ru-RU')}
+                        </span>
+                      )}
+                    </div>
                   </div>
                 )}
                 

@@ -1,5 +1,5 @@
 import { Router, Request, Response } from "express";
-import { getAllChannels, getChannelById, Channel } from "../models/channel";
+import { getAllChannels, getChannelById, Channel, AutomationStatus } from "../models/channel";
 import { createJob, countActiveJobs } from "../models/videoJob";
 import { generateIdeas } from "../services/openaiService";
 import { generateVeoPrompt } from "../services/openaiService";
@@ -13,6 +13,52 @@ import { createAutomationLogger, AutomationLogger } from "../utils/automationLog
 import * as admin from "firebase-admin";
 
 const router = Router();
+
+/**
+ * Обновляет статус автоматизации канала
+ */
+async function updateChannelStatus(
+  channelId: string,
+  status: AutomationStatus,
+  message: string,
+  logger?: AutomationLogger,
+  step?: string | null
+): Promise<void> {
+  try {
+    const { updateChannel, getChannelById } = await import("../models/channel");
+    const channel = await getChannelById(channelId);
+    
+    if (!channel || !channel.automation) {
+      console.warn(`[Automation] Cannot update status: channel ${channelId} not found or has no automation`);
+      return;
+    }
+
+    await updateChannel(channelId, {
+      automation: {
+        ...channel.automation,
+        status,
+        statusMessage: message,
+        lastStatusAt: Date.now(),
+        currentStep: step || null,
+      },
+    });
+
+    console.log(`[Automation] 📊 Status updated for channel ${channelId}: ${status} - ${message}`);
+    
+    if (logger) {
+      await logger.logEvent({
+        level: status === "error" ? "error" : "info",
+        step: "other",
+        channelId,
+        channelName: channel.name,
+        message: `Status: ${status} - ${message}`,
+        details: { status, message, step },
+      });
+    }
+  } catch (error: any) {
+    console.error(`[Automation] ⚠️ Failed to update channel status:`, error);
+  }
+}
 
 /**
  * Проверяет, нужно ли запускать автоматизацию для канала в текущее время
@@ -268,47 +314,35 @@ export async function createAutomatedJob(
       return null;
     }
 
-    // Шаг 1: Генерация идеи
-    let ideas;
+    // Обновляем статус: running, шаг: генерация идеи
+    await updateChannelStatus(channel.id, "running", "Генерация идеи...", logger);
+
+    // Шаг 1: Генерация одной идеи (упрощённый пайплайн)
+    let selectedIdea;
     try {
+      console.log(`[Automation] 📝 Step 1: Generating single idea for channel ${channel.id}`);
+      
       if (logger) {
         await logger.logEvent({
           level: "info",
           step: "generate-idea",
           channelId: channel.id,
           channelName: channel.name,
-          message: "Начинаю генерацию идеи",
+          message: "Начинаю генерацию одной идеи",
         });
       }
 
-      const usedIdeas =
-        channel.automation?.useOnlyFreshIdeas === true
-          ? await getUsedIdeasForChannel(channel.id)
-          : [];
-      ideas = await generateIdeas(channel, null, 5);
-
-      // Фильтруем использованные идеи, если нужно
-      if (channel.automation?.useOnlyFreshIdeas === true && usedIdeas.length > 0) {
-        ideas = ideas.filter(
-          (idea) =>
-            !usedIdeas.some(
-              (used) =>
-                used.toLowerCase().includes(idea.title.toLowerCase()) ||
-                used.toLowerCase().includes(idea.description.toLowerCase())
-            )
-        );
+      // Генерируем только одну идею (упрощение)
+      const ideas = await generateIdeas(channel, null, 1);
+      
+      if (!ideas || ideas.length === 0) {
+        throw new Error("Не удалось сгенерировать идею: OpenAI вернул пустой результат");
       }
 
-      if (ideas.length === 0) {
-        console.warn(
-          `[Automation] No fresh ideas for channel ${channel.id}, using any available`
-        );
-        ideas = await generateIdeas(channel, null, 5);
-      }
-
-      if (ideas.length === 0) {
-        throw new Error("Failed to generate ideas");
-      }
+      selectedIdea = ideas[0];
+      
+      console.log(`[Automation] ✅ Idea generated: "${selectedIdea.title}"`);
+      console.log(`[Automation]    Description: ${selectedIdea.description.substring(0, 100)}...`);
 
       if (logger) {
         await logger.logEvent({
@@ -316,14 +350,20 @@ export async function createAutomatedJob(
           step: "generate-idea",
           channelId: channel.id,
           channelName: channel.name,
-          message: `Идея сгенерирована: ${ideas[0]?.title || "N/A"}`,
-          details: { ideasCount: ideas.length },
+          message: `Идея сгенерирована: ${selectedIdea.title}`,
+          details: { ideaTitle: selectedIdea.title, ideaDescription: selectedIdea.description.substring(0, 200) },
         });
       }
     } catch (error: any) {
-      console.error(
-        `[Automation] Error generating ideas for channel ${channel.id}:`,
-        error
+      const errorMsg = error?.message || String(error);
+      console.error(`[Automation] ❌ Error generating idea for channel ${channel.id}:`, errorMsg);
+      console.error(`[Automation] Error stack:`, error?.stack);
+      
+      await updateChannelStatus(
+        channel.id,
+        "error",
+        `Ошибка генерации идеи: ${errorMsg}`,
+        logger
       );
       
       if (logger) {
@@ -333,29 +373,29 @@ export async function createAutomatedJob(
           channelId: channel.id,
           channelName: channel.name,
           message: "Ошибка генерации идеи",
-          details: { error: error.message },
+          details: { error: errorMsg, stack: error?.stack?.substring(0, 500) },
         });
       }
       
       throw error;
     }
 
-    // Выбираем первую идею
-    const selectedIdea = ideas[0];
-    console.log(
-      `[Automation] Selected idea for channel ${channel.id}: ${selectedIdea.title}`
-    );
+    // Обновляем статус: шаг - генерация промпта
+    await updateChannelStatus(channel.id, "running", "Генерация Veo-промпта...", logger, "generate-prompt");
 
-    // Шаг 2: Генерация промпта
+    // Шаг 2: Генерация Veo-промпта
     let veoPromptResult;
     try {
+      console.log(`[Automation] 📝 Step 2: Generating Veo prompt for idea "${selectedIdea.title}"`);
+      
       if (logger) {
         await logger.logEvent({
           level: "info",
           step: "generate-prompt",
           channelId: channel.id,
           channelName: channel.name,
-          message: "Начинаю генерацию промпта",
+          message: "Начинаю генерацию Veo-промпта",
+          details: { ideaTitle: selectedIdea.title },
         });
       }
 
@@ -364,20 +404,35 @@ export async function createAutomatedJob(
         description: selectedIdea.description,
       });
 
+      console.log(`[Automation] ✅ Veo prompt generated`);
+      console.log(`[Automation]    Video title: "${veoPromptResult.videoTitle}"`);
+      console.log(`[Automation]    Prompt length: ${veoPromptResult.veoPrompt.length} chars`);
+      console.log(`[Automation]    Prompt preview: ${veoPromptResult.veoPrompt.substring(0, 150)}...`);
+
       if (logger) {
         await logger.logEvent({
           level: "info",
           step: "generate-prompt",
           channelId: channel.id,
           channelName: channel.name,
-          message: "Промпт сгенерирован",
-          details: { videoTitle: veoPromptResult.videoTitle },
+          message: "Veo-промпт сгенерирован успешно",
+          details: { 
+            videoTitle: veoPromptResult.videoTitle,
+            promptLength: veoPromptResult.veoPrompt.length,
+          },
         });
       }
     } catch (error: any) {
-      console.error(
-        `[Automation] Error generating prompt for channel ${channel.id}:`,
-        error
+      const errorMsg = error?.message || String(error);
+      console.error(`[Automation] ❌ Error generating Veo prompt for channel ${channel.id}:`, errorMsg);
+      console.error(`[Automation] Error stack:`, error?.stack);
+      
+      await updateChannelStatus(
+        channel.id,
+        "error",
+        `Ошибка генерации Veo-промпта: ${errorMsg}`,
+        logger,
+        "generate-prompt"
       );
       
       if (logger) {
@@ -386,17 +441,22 @@ export async function createAutomatedJob(
           step: "generate-prompt",
           channelId: channel.id,
           channelName: channel.name,
-          message: "Ошибка генерации промпта",
-          details: { error: error.message },
+          message: "Ошибка генерации Veo-промпта",
+          details: { error: errorMsg, stack: error?.stack?.substring(0, 500) },
         });
       }
       
       throw error;
     }
 
-    // Шаг 3: Создание задачи
+    // Обновляем статус: шаг - создание задачи
+    await updateChannelStatus(channel.id, "running", "Создание задачи генерации видео...", logger, "create-job");
+
+    // Шаг 3: Создание задачи генерации видео
     let job;
     try {
+      console.log(`[Automation] 📝 Step 3: Creating video job with prompt for "${veoPromptResult.videoTitle}"`);
+      
       if (logger) {
         await logger.logEvent({
           level: "info",
@@ -404,24 +464,28 @@ export async function createAutomatedJob(
           channelId: channel.id,
           channelName: channel.name,
           message: "Создаю задачу генерации видео",
+          details: { videoTitle: veoPromptResult.videoTitle },
         });
       }
 
+      const ideaText = `${selectedIdea.title}: ${selectedIdea.description}`;
       job = await createJob(
         veoPromptResult.veoPrompt,
         channel.id,
         channel.name,
-        `${selectedIdea.title}: ${selectedIdea.description}`,
+        ideaText,
         veoPromptResult.videoTitle
       );
 
-      console.log(
-        `[Automation] ✅ Job document created in Firestore: ${job.id} for channel ${channel.id}`
-      );
+      console.log(`[Automation] ✅ Job created in Firestore: ${job.id}`);
+      console.log(`[Automation]    Job status: ${job.status}`);
+      console.log(`[Automation]    Channel: ${channel.name} (${channel.id})`);
 
       // Помечаем задачу как автоматическую
       const { updateJob } = await import("../models/videoJob");
       await updateJob(job.id, { isAuto: true });
+      
+      console.log(`[Automation] ✅ Job marked as auto: ${job.id}`);
 
       if (logger) {
         logger.incrementJobsCreated();
@@ -431,13 +495,25 @@ export async function createAutomatedJob(
           channelId: channel.id,
           channelName: channel.name,
           message: "Задача создана успешно",
-          details: { jobId: job.id, prompt: veoPromptResult.veoPrompt.substring(0, 100) },
+          details: { 
+            jobId: job.id, 
+            status: job.status,
+            videoTitle: veoPromptResult.videoTitle,
+            promptLength: veoPromptResult.veoPrompt.length,
+          },
         });
       }
     } catch (error: any) {
-      console.error(
-        `[Automation] Error creating job for channel ${channel.id}:`,
-        error
+      const errorMsg = error?.message || String(error);
+      console.error(`[Automation] ❌ Error creating job for channel ${channel.id}:`, errorMsg);
+      console.error(`[Automation] Error stack:`, error?.stack);
+      
+      await updateChannelStatus(
+        channel.id,
+        "error",
+        `Ошибка создания задачи: ${errorMsg}`,
+        logger,
+        "create-job"
       );
       
       if (logger) {
@@ -447,7 +523,7 @@ export async function createAutomatedJob(
           channelId: channel.id,
           channelName: channel.name,
           message: "Ошибка создания задачи",
-          details: { error: error.message },
+          details: { error: errorMsg, stack: error?.stack?.substring(0, 500) },
         });
       }
       
@@ -461,6 +537,15 @@ export async function createAutomatedJob(
     console.log(`[Automation] Idea: ${selectedIdea.title}`);
     console.log(`[Automation] Video title: ${veoPromptResult.videoTitle}`);
     console.log("─".repeat(80));
+
+    // Обновляем статус на success
+    await updateChannelStatus(
+      channel.id,
+      "success",
+      `Успешно создана задача ${job.id} для видео "${veoPromptResult.videoTitle}"`,
+      logger,
+      undefined
+    );
 
     // Обновляем lastRunAt и пересчитываем nextRunAt только после успешного создания задачи
     const { calculateNextRunAt } = await import("../utils/automationSchedule");
@@ -480,8 +565,8 @@ export async function createAutomatedJob(
             ...channel.automation,
             lastRunAt: now,
             nextRunAt,
-            isRunning: true,
-            runId,
+            isRunning: false, // Сбрасываем флаг, так как задача создана
+            runId: null,
           },
         });
         
@@ -544,12 +629,31 @@ export async function createAutomatedJob(
     return job.id;
   } catch (error: any) {
     const duration = Date.now() - startTime;
+    const errorMsg = error?.message || String(error);
+    
     console.error("─".repeat(80));
     console.error(`[Automation] ❌ ERROR: Failed to create automated job for channel ${channel.id}`);
-    console.error(`[Automation] Error: ${error.message}`);
-    console.error(`[Automation] Stack: ${error.stack}`);
+    console.error(`[Automation] Error: ${errorMsg}`);
+    console.error(`[Automation] Stack: ${error?.stack}`);
     console.error(`[Automation] Duration: ${duration}ms`);
     console.error("─".repeat(80));
+    
+    // Обновляем статус на error (если еще не обновлен в конкретном шаге)
+    try {
+      const { getChannelById } = await import("../models/channel");
+      const currentChannel = await getChannelById(channel.id);
+      if (currentChannel?.automation?.status !== "error") {
+        await updateChannelStatus(
+          channel.id,
+          "error",
+          `Ошибка автоматизации: ${errorMsg}`,
+          logger,
+          undefined
+        );
+      }
+    } catch (statusError) {
+      console.error(`[Automation] ⚠️ Failed to update error status:`, statusError);
+    }
     
     if (logger) {
       await logger.logEvent({
@@ -557,23 +661,27 @@ export async function createAutomatedJob(
         step: "other",
         channelId: channel.id,
         channelName: channel.name,
-        message: `Критическая ошибка: ${error.message}`,
-        details: { error: error.message, stack: error.stack?.substring(0, 500) },
+        message: `Критическая ошибка: ${errorMsg}`,
+        details: { error: errorMsg, stack: error?.stack?.substring(0, 500) },
       });
     }
     
     // Сбрасываем флаг isRunning при ошибке
     try {
       const { updateChannel } = await import("../models/channel");
-      await updateChannel(channel.id, {
-        automation: {
-          ...channel.automation!,
-          isRunning: false,
-          runId: null,
-        },
-      });
+      const currentChannel = await getChannelById(channel.id);
+      if (currentChannel?.automation) {
+        await updateChannel(channel.id, {
+          automation: {
+            ...currentChannel.automation,
+            isRunning: false,
+            runId: null,
+          },
+        });
+        console.log(`[Automation] ✅ Reset isRunning flag for channel ${channel.id} after error`);
+      }
     } catch (updateError) {
-      console.error("[Automation] Failed to reset isRunning flag:", updateError);
+      console.error("[Automation] ⚠️ Failed to reset isRunning flag:", updateError);
     }
     
     // Отправляем уведомление об ошибке

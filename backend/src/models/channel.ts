@@ -1,5 +1,7 @@
 export type Language = "ru" | "kk" | "en";
 
+export type AutomationStatus = "idle" | "running" | "success" | "error";
+
 export interface ChannelAutomation {
   enabled: boolean;
   frequencyPerDay: number; // 0, 1, 2, 3, 4, 5, 6
@@ -14,6 +16,10 @@ export interface ChannelAutomation {
   isRunning?: boolean; // Флаг, что автоматизация сейчас выполняет цикл
   runId?: string | null; // ID текущего запуска для отслеживания
   manualStoppedAt?: number | null; // Timestamp ручной остановки автоматизации
+  status?: AutomationStatus; // Текущий статус автоматизации
+  statusMessage?: string | null; // Сообщение о последнем статусе
+  lastStatusAt?: number | null; // Timestamp последнего изменения статуса
+  currentStep?: string | null; // Текущий шаг выполнения (для отображения в UI)
 }
 
 export interface Channel {
