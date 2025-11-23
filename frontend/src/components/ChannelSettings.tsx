@@ -19,6 +19,7 @@ interface ChannelAutomation {
   nextRunAt?: number | null
   isRunning?: boolean
   runId?: string | null
+  manualStoppedAt?: number | null
 }
 
 interface Channel {
@@ -58,6 +59,7 @@ const ChannelSettings: React.FC = () => {
       autoApproveAndUpload: false,
       useOnlyFreshIdeas: false,
       maxActiveTasks: 2,
+      manualStoppedAt: null,
     } as ChannelAutomation,
   })
 
@@ -211,7 +213,7 @@ const ChannelSettings: React.FC = () => {
     <>
       <ToastContainer toasts={toast.toasts} onRemove={toast.removeToast} />
       <div className="channel-settings-container">
-      <div className="card">
+        <div className="card">
         <h2>{editingId ? 'Редактировать канал' : 'Добавить канал'}</h2>
         {error && (
           <div className="error channel-settings-alert" role="alert">
@@ -504,7 +506,7 @@ const ChannelSettings: React.FC = () => {
                   </div>
                 ) : formData.automation.manualStoppedAt ? (
                   <div className="automation-status__idle" style={{ backgroundColor: '#fef3c7', border: '1px solid #f59e0b', borderRadius: '4px', padding: '8px 12px' }}>
-                    <span className="automation-status__indicator" style={{ backgroundColor: '#f59e0b }}></span>
+                    <span className="automation-status__indicator" style={{ backgroundColor: '#f59e0b' }}></span>
                     <span className="automation-status__text">Автоматизация остановлена вручную</span>
                   </div>
                 ) : (
@@ -800,10 +802,10 @@ const ChannelSettings: React.FC = () => {
             )}
           </div>
         </form>
-      </div>
+        </div>
 
-      <div className="card">
-        <h2>Список каналов</h2>
+        <div className="card">
+          <h2>Список каналов</h2>
         <div className="channel-list">
           {channels.length === 0 ? (
             <p className="channel-list-empty">Каналы не найдены</p>
@@ -896,6 +898,7 @@ const ChannelSettings: React.FC = () => {
               </div>
             </>
           )}
+        </div>
         </div>
       </div>
     </>
