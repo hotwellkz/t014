@@ -1759,6 +1759,18 @@ const VideoGeneration: React.FC = () => {
               disabled: generatingIdeas || generatingPrompt,
               variant: 'primary',
               loading: generatingIdeas
+            },
+            {
+              id: 'custom-prompt',
+              icon: '📝',
+              text: 'Промпт',
+              onClick: () => {
+                console.log('[customPrompt] open modal from mobile bar')
+                setShowCustomPromptModal(true)
+                setCustomPromptText('')
+              },
+              disabled: generatingIdeas || generatingPrompt,
+              variant: 'secondary'
             }
           ]}
         />

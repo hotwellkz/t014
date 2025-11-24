@@ -3411,15 +3411,18 @@
 /* Новый компонент MobileActionsBar - липкое нижнее меню */
 .mobile-actions-bar {
   display: none; /* Скрыто по умолчанию, показывается только на мобильных */
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: 50;
-  max-width: 100%;
-  box-sizing: border-box;
+  position: fixed !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9999 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
   background: #fff;
   box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.06);
+  pointer-events: auto !important;
+  transform: none !important;
 }
 
 .mobile-actions-bar__container {
@@ -3428,7 +3431,11 @@
   padding: 8px 12px;
   padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
   max-width: 100%;
+  width: 100%;
   box-sizing: border-box;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 10000;
 }
 
 .mobile-actions-bar__button {
@@ -3450,6 +3457,10 @@
   white-space: nowrap;
   flex: 1;
   min-width: 0;
+  position: relative;
+  z-index: 10000;
+  pointer-events: auto !important;
+  user-select: none;
 }
 
 .mobile-actions-bar__button--secondary {
