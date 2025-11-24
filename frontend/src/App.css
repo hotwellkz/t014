@@ -630,16 +630,18 @@
     text-align: center;
   }
   .tabs {
+    display: flex;
     flex-wrap: wrap;
-    gap: 0.5rem;
+    gap: 8px;
     justify-content: center;
+    margin-bottom: 1rem;
   }
   .tabs button,
   .tabs a {
-    padding: 0.6rem 1rem;
-    font-size: 0.9rem;
-    flex: 1;
-    min-width: calc(50% - 0.25rem);
+    padding: 0.5rem 0.75rem;
+    font-size: 12px;
+    flex: 0 1 calc(50% - 4px);
+    min-width: 0;
     text-align: center;
   }
   .app-main {
@@ -813,14 +815,18 @@
     margin-bottom: 0.625rem;
   }
   .tabs {
-    gap: 0.375rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 1rem;
   }
   .tabs button,
   .tabs a {
-    padding: 0.5rem 0.75rem;
-    font-size: 0.85rem;
+    padding: 0.5rem 0.625rem;
+    font-size: 12px;
     min-width: 0;
-    flex: 1;
+    flex: 0 1 calc(50% - 4px);
   }
   .step-indicator {
     gap: 0.375rem;

@@ -17,7 +17,7 @@ function App() {
   return (
     <div className="app">
       <header className="app-header">
-        <h1>WhiteCoding Studio</h1>
+        <h1>shortai.ru</h1>
         <nav className="tabs">
           <Link
             to="/"
