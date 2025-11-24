@@ -401,7 +401,25 @@
   gap: 0.5rem;
   flex: 1;
   opacity: 0.6;
-  transition: opacity 0.2s;
+  transition: all 0.2s ease;
+}
+
+.steps-progress__step--clickable {
+  cursor: pointer;
+}
+
+.steps-progress__step--clickable:hover {
+  transform: translateY(-2px);
+}
+
+.steps-progress__step--clickable:hover .steps-progress__number {
+  background: linear-gradient(135deg, #5568d3 0%, #663a82 100%);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.steps-progress__step--disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .steps-progress__step.active {
@@ -702,8 +720,14 @@
     display: block !important;
   }
 
+  /* Скрываем десктопные кнопки на мобильных */
+  .step-2-actions-desktop {
+    display: none !important;
+  }
+
   /* Добавляем отступ снизу для контента */
-  .step-3-container {
+  .step-3-container,
+  .step-2-container {
     padding-bottom: 88px !important; /* Высота панели + запас */
   }
 
@@ -3316,6 +3340,69 @@
 .step-3-title-group input:focus {
   border-color: #667eea;
   box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Стили для шага 2 - сворачиваемое описание канала */
+.step-2-channel-info {
+  background: #f8fafc;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  border: 1px solid #e2e8f0;
+}
+
+.step-2-channel-name {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.step-2-channel-description {
+  margin-bottom: 0.75rem;
+}
+
+.step-2-description-text {
+  margin: 0 0 0.5rem 0;
+  color: #64748b;
+  line-height: 1.5;
+  transition: all 0.3s ease;
+}
+
+.step-2-description-text--collapsed {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.step-2-description-toggle {
+  background: transparent;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 0.875rem;
+  text-decoration: underline;
+  padding: 0;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.step-2-description-toggle:hover {
+  color: #5568d3;
+}
+
+.step-2-channel-meta {
+  font-size: 0.875rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.step-2-actions-desktop {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
 }
 
 /* Новый компонент MobileActionsBar - липкое нижнее меню */

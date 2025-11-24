@@ -1203,15 +1203,24 @@ const VideoGeneration: React.FC = () => {
 
       {/* Прогресс-индикатор шагов */}
       <div className="steps-progress">
-        <div className={`steps-progress__step ${step === 1 ? 'active' : ''}`}>
+        <div 
+          className={`steps-progress__step ${step === 1 ? 'active' : ''}`}
+          onClick={() => setStep(1)}
+        >
           <div className="steps-progress__number">1</div>
           <span className="steps-progress__label">Выбор канала</span>
         </div>
-        <div className={`steps-progress__step ${step === 2 ? 'active' : ''}`}>
+        <div 
+          className={`steps-progress__step ${step === 2 ? 'active' : ''} ${selectedChannel ? 'steps-progress__step--clickable' : 'steps-progress__step--disabled'}`}
+          onClick={() => selectedChannel && setStep(2)}
+        >
           <div className="steps-progress__number">2</div>
           <span className="steps-progress__label">Генерация идей</span>
         </div>
-        <div className={`steps-progress__step ${step === 3 ? 'active' : ''}`}>
+        <div 
+          className={`steps-progress__step ${step === 3 ? 'active' : ''} ${selectedChannel ? 'steps-progress__step--clickable' : 'steps-progress__step--disabled'}`}
+          onClick={() => selectedChannel && setStep(3)}
+        >
           <div className="steps-progress__number">3</div>
           <span className="steps-progress__label">Промпт + генерация</span>
         </div>
@@ -1321,12 +1330,23 @@ const VideoGeneration: React.FC = () => {
             ← Назад
           </button>
 
-          <div style={{ background: '#f7fafc', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-            <h3 style={{ margin: '0 0 0.5rem 0' }}>{selectedChannel.name}</h3>
+          <div className="step-2-channel-info">
+            <h3 className="step-2-channel-name">{selectedChannel.name}</h3>
             {selectedChannel.description && (
-              <p style={{ margin: '0 0 0.5rem 0', color: '#718096' }}>{selectedChannel.description}</p>
+              <div className="step-2-channel-description">
+                <p className={`step-2-description-text ${!isChannelDescriptionExpanded ? 'step-2-description-text--collapsed' : ''}`}>
+                  {selectedChannel.description}
+                </p>
+                <button
+                  type="button"
+                  className="step-2-description-toggle"
+                  onClick={() => setIsChannelDescriptionExpanded(!isChannelDescriptionExpanded)}
+                >
+                  {isChannelDescriptionExpanded ? 'Свернуть' : 'Показать подробнее'}
+                </button>
+              </div>
             )}
-            <div style={{ fontSize: '0.875rem', color: '#a0aec0' }}>
+            <div className="step-2-channel-meta">
               Язык: {selectedChannel.language.toUpperCase()} • Длительность: {selectedChannel.durationSeconds}с
             </div>
           </div>
@@ -1341,7 +1361,7 @@ const VideoGeneration: React.FC = () => {
             />
           </div>
 
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div className="step-2-actions-desktop">
             <button
               className="button"
               onClick={handleStartVoiceInput}
@@ -1715,6 +1735,28 @@ const VideoGeneration: React.FC = () => {
               </button>
             </div>
           </div>
+          {/* Мобильная панель действий для шага 2 */}
+          <MobileActionsBar
+            buttons={[
+              {
+                id: 'voice-idea',
+                icon: '🎤',
+                text: 'Своя идея',
+                onClick: handleStartVoiceInput,
+                disabled: generatingIdeas || generatingPrompt,
+                variant: 'secondary'
+              },
+              {
+                id: 'generate-ideas',
+                icon: '✨',
+                text: 'Генерировать',
+                onClick: handleGenerateIdeas,
+                disabled: generatingIdeas || generatingPrompt,
+                variant: 'primary',
+                loading: generatingIdeas
+              }
+            ]}
+          />
         </div>
       )}
 
@@ -1928,15 +1970,35 @@ const VideoGeneration: React.FC = () => {
             showChannelName={false}
           />
 
-          {/* Новая мобильная панель действий */}
+          {/* Мобильная панель действий для шага 3 */}
           <MobileActionsBar
-            onCopyPrompt={handleCopyPrompt}
-            onCopyTitle={handleCopyTitle}
-            onGenerate={handleGenerateVideo}
-            promptDisabled={!veoPrompt.trim()}
-            titleDisabled={!videoTitle.trim()}
-            generateDisabled={loading || !veoPrompt.trim() || activeJobsCount >= maxActiveJobs}
-            loading={loading}
+            buttons={[
+              {
+                id: 'copy-prompt',
+                icon: '📋',
+                text: 'Промпт',
+                onClick: handleCopyPrompt,
+                disabled: !veoPrompt.trim(),
+                variant: 'secondary'
+              },
+              {
+                id: 'copy-title',
+                icon: '📋',
+                text: 'Название',
+                onClick: handleCopyTitle,
+                disabled: !videoTitle.trim(),
+                variant: 'secondary'
+              },
+              {
+                id: 'generate-video',
+                icon: '🎬',
+                text: 'Сгенерировать',
+                onClick: handleGenerateVideo,
+                disabled: loading || !veoPrompt.trim() || activeJobsCount >= maxActiveJobs,
+                variant: 'primary',
+                loading: loading
+              }
+            ]}
           />
 
         </div>

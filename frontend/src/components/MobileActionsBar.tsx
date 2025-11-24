@@ -1,61 +1,43 @@
 import React from 'react'
 
-interface MobileActionsBarProps {
-  onCopyPrompt: () => void
-  onCopyTitle: () => void
-  onGenerate: () => void
-  promptDisabled?: boolean
-  titleDisabled?: boolean
-  generateDisabled?: boolean
+interface ActionButton {
+  id: string
+  icon: string
+  text: string
+  onClick: () => void
+  disabled?: boolean
+  variant?: 'primary' | 'secondary'
   loading?: boolean
+}
+
+interface MobileActionsBarProps {
+  buttons: ActionButton[]
   className?: string
 }
 
 const MobileActionsBar: React.FC<MobileActionsBarProps> = ({
-  onCopyPrompt,
-  onCopyTitle,
-  onGenerate,
-  promptDisabled = false,
-  titleDisabled = false,
-  generateDisabled = false,
-  loading = false,
+  buttons,
   className = ''
 }) => {
   return (
     <div className={`mobile-actions-bar ${className}`}>
       <div className="mobile-actions-bar__container">
-        <button
-          type="button"
-          className="mobile-actions-bar__button mobile-actions-bar__button--secondary"
-          onClick={onCopyPrompt}
-          disabled={promptDisabled}
-          title="Скопировать промпт"
-        >
-          <span className="mobile-actions-bar__icon">📋</span>
-          <span className="mobile-actions-bar__text">Промпт</span>
-        </button>
-        <button
-          type="button"
-          className="mobile-actions-bar__button mobile-actions-bar__button--secondary"
-          onClick={onCopyTitle}
-          disabled={titleDisabled}
-          title="Скопировать название"
-        >
-          <span className="mobile-actions-bar__icon">📋</span>
-          <span className="mobile-actions-bar__text">Название</span>
-        </button>
-        <button
-          className="mobile-actions-bar__button mobile-actions-bar__button--primary"
-          onClick={onGenerate}
-          disabled={generateDisabled}
-        >
-          <span className="mobile-actions-bar__icon">
-            {loading ? '⏳' : '🎬'}
-          </span>
-          <span className="mobile-actions-bar__text">
-            {loading ? 'Создание...' : 'Сгенерировать'}
-          </span>
-        </button>
+        {buttons.map((button) => (
+          <button
+            key={button.id}
+            type="button"
+            className={`mobile-actions-bar__button mobile-actions-bar__button--${button.variant || 'secondary'}`}
+            onClick={button.onClick}
+            disabled={button.disabled}
+          >
+            <span className="mobile-actions-bar__icon">
+              {button.loading ? '⏳' : button.icon}
+            </span>
+            <span className="mobile-actions-bar__text">
+              {button.loading ? 'Загрузка...' : button.text}
+            </span>
+          </button>
+        ))}
       </div>
     </div>
   )
