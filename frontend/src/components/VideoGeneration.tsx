@@ -217,6 +217,9 @@ const VideoGeneration: React.FC = () => {
   const [showCustomPromptModal, setShowCustomPromptModal] = useState(false)
   const [customPromptText, setCustomPromptText] = useState<string>('')
   const [customPromptError, setCustomPromptError] = useState<string>('')
+  
+  // Состояние для сворачивания промпта на мобильном
+  const [isPromptCollapsed, setIsPromptCollapsed] = useState(true)
 
   // Polling для обновления статусов задач
   const pollingIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -325,8 +328,19 @@ const VideoGeneration: React.FC = () => {
   useEffect(() => {
     if (step !== 3) {
       setJobCreationInfo(null)
+      setIsPromptCollapsed(true)
     }
   }, [step])
+
+  // Автоскрытие toast о создании задачи через 5 секунд
+  useEffect(() => {
+    if (jobCreationInfo) {
+      const timer = setTimeout(() => {
+        setJobCreationInfo(null)
+      }, 5000)
+      return () => clearTimeout(timer)
+    }
+  }, [jobCreationInfo])
 
   // Polling для обновления списка задач, когда выбран канал
   useEffect(() => {
@@ -1705,98 +1719,133 @@ const VideoGeneration: React.FC = () => {
 
       {/* Шаг 3: Промпт + генерация видео */}
       {step === 3 && selectedChannel && (
-        <div>
+        <div className="step-3-container">
           <button
-            className="button button-secondary"
+            className="button button-secondary step-3-back-button"
             onClick={() => {
               setStep(2)
               setVeoPrompt('')
               setVideoTitle('')
             }}
-            style={{ marginBottom: '1rem' }}
           >
             ← Назад
           </button>
 
+          {/* Компактный toast о создании задачи (только на мобильном) */}
           {jobCreationInfo && (
-            <div
-              className="success"
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                gap: '1rem',
-                marginBottom: '1rem',
-              }}
-            >
-              <span>
-                ✅ Задача {jobCreationInfo.title ? `"${jobCreationInfo.title}"` : jobCreationInfo.id} создана. Видео генерируется...
-              </span>
-              <button
-                onClick={() => setJobCreationInfo(null)}
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: '#2d3748',
-                  cursor: 'pointer',
-                  fontSize: '1rem',
-                }}
-                aria-label="Закрыть уведомление о задаче"
-              >
-                X
-              </button>
-            </div>
-          )}
-
-          {selectedIdea && (
-            <div style={{ background: '#f7fafc', padding: '1rem', borderRadius: '8px', marginBottom: '1rem' }}>
-              <h3 style={{ margin: '0 0 0.5rem 0' }}>Выбранная идея:</h3>
-              <strong>{selectedIdea.title}</strong>
-              <p style={{ margin: '0.5rem 0 0 0', color: '#718096' }}>{selectedIdea.description}</p>
-            </div>
-          )}
-
-          <div className="input-group">
-            <label>
-              Промпт для Veo 3.1 Fast
-              <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
+            <>
+              <div className="step-3-job-toast">
+                <span>✅ Задача создана, видео генерируется...</span>
                 <button
-                  type="button"
-                  className="button button-secondary"
-                  onClick={handleCopyPrompt}
-                  disabled={!veoPrompt.trim()}
-                  style={{ 
-                    fontSize: '0.875rem', 
-                    padding: '0.5rem 1rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}
-                  title="Скопировать промпт в буфер обмена"
+                  onClick={() => setJobCreationInfo(null)}
+                  className="step-3-job-toast-close"
+                  aria-label="Закрыть уведомление о задаче"
                 >
-                  📋 Скопировать промпт
+                  ×
                 </button>
               </div>
-            </label>
-            <textarea
-              value={veoPrompt}
-              onChange={(e) => setVeoPrompt(e.target.value)}
-              placeholder="Промпт для генерации видео..."
-              rows={6}
-            />
-            {selectedIdea && (
-              <button
-                className="button button-secondary"
-                onClick={handleRegeneratePrompt}
-                disabled={generatingPrompt}
-                style={{ marginTop: '0.5rem' }}
+              {/* Старый блок для десктопа (скрыт на мобильном через CSS) */}
+              <div
+                className="success step-3-job-desktop"
+                style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: '1rem',
+                  marginBottom: '1rem',
+                }}
               >
-                {generatingPrompt ? 'Генерация...' : '🔄 Сгенерировать промпт ещё раз'}
-              </button>
-            )}
+                <span>
+                  ✅ Задача {jobCreationInfo.title ? `"${jobCreationInfo.title}"` : jobCreationInfo.id} создана. Видео генерируется...
+                </span>
+                <button
+                  onClick={() => setJobCreationInfo(null)}
+                  style={{
+                    background: 'transparent',
+                    border: 'none',
+                    color: '#2d3748',
+                    cursor: 'pointer',
+                    fontSize: '1rem',
+                  }}
+                  aria-label="Закрыть уведомление о задаче"
+                >
+                  X
+                </button>
+              </div>
+            </>
+          )}
+
+          {/* Название канала одной строкой */}
+          <div className="step-3-channel-name">
+            Канал: {selectedChannel.name}
           </div>
 
-          <div className="input-group">
+          {/* Кнопки копирования (на мобильном в одной строке) */}
+          <div className="step-3-copy-buttons">
+            <button
+              type="button"
+              className="button button-secondary step-3-copy-button"
+              onClick={handleCopyPrompt}
+              disabled={!veoPrompt.trim()}
+              title="Скопировать промпт в буфер обмена"
+            >
+              📋 Скопировать промпт
+            </button>
+            <button
+              type="button"
+              className="button button-secondary step-3-copy-button"
+              onClick={handleCopyTitle}
+              disabled={!videoTitle.trim()}
+              title="Скопировать название ролика"
+            >
+              📋 Скопировать название
+            </button>
+          </div>
+
+          {/* Основная кнопка генерации */}
+          <button
+            className="button step-3-generate-button"
+            onClick={handleGenerateVideo}
+            disabled={loading || !veoPrompt.trim() || activeJobsCount >= maxActiveJobs}
+          >
+            {loading ? '⏳ Создание задачи...' : '🎬 Сгенерировать видео'}
+          </button>
+
+          {/* Промпт с возможностью сворачивания на мобильном */}
+          <div className="input-group step-3-prompt-group">
+            <label className="step-3-prompt-label">
+              <span>Промпт для Veo 3.1 Fast</span>
+              <button
+                type="button"
+                className="step-3-prompt-toggle"
+                onClick={() => setIsPromptCollapsed(!isPromptCollapsed)}
+                aria-label={isPromptCollapsed ? 'Показать промпт' : 'Скрыть промпт'}
+              >
+                {isPromptCollapsed ? 'Показать промпт' : 'Скрыть промпт'}
+              </button>
+            </label>
+            <div className={`step-3-prompt-content ${isPromptCollapsed ? 'step-3-prompt-content--collapsed' : ''}`}>
+              <textarea
+                className="step-3-prompt-textarea"
+                value={veoPrompt}
+                onChange={(e) => setVeoPrompt(e.target.value)}
+                placeholder="Промпт для генерации видео..."
+                rows={6}
+              />
+              {selectedIdea && (
+                <button
+                  className="button button-secondary"
+                  onClick={handleRegeneratePrompt}
+                  disabled={generatingPrompt}
+                  style={{ marginTop: '0.5rem' }}
+                >
+                  {generatingPrompt ? 'Генерация...' : '🔄 Сгенерировать промпт ещё раз'}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div className="input-group step-3-title-group">
             <label>Название ролика</label>
             <input
               type="text"
@@ -1836,6 +1885,7 @@ const VideoGeneration: React.FC = () => {
           {/* Настройки уведомлений - collapsible */}
           <NotificationSettingsCollapsible notifications={notifications} />
 
+          {/* Десктопные кнопки (скрыты на мобильном) */}
           <div className="video-generation-actions">
             <div className="video-generation-actions__buttons">
               <button
@@ -1861,26 +1911,6 @@ const VideoGeneration: React.FC = () => {
                 ⚠️ Доступно не более {maxActiveJobs} одновременных генераций. Подождите, пока одна из задач завершится.
               </div>
             )}
-          </div>
-
-          {/* Закреплённая панель с кнопками для мобильных */}
-          <div className="mobile-generate-button">
-            <div className="mobile-generate-button__container">
-              <button
-                className="button button-secondary mobile-generate-button__copy"
-                onClick={handleCopyTitle}
-                title="Скопировать название ролика"
-              >
-                📋 Скопировать название
-              </button>
-              <button
-                className="button mobile-generate-button__generate"
-                onClick={handleGenerateVideo}
-                disabled={loading || !veoPrompt.trim() || activeJobsCount >= maxActiveJobs}
-              >
-                {loading ? '⏳ Создание задачи...' : '🎬 Сгенерировать видео'}
-              </button>
-            </div>
           </div>
 
           {/* Список задач */}

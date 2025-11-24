@@ -2928,3 +2928,297 @@
   }
 }
 
+/* ============================================
+   ШАГ 3: КОМПАКТНЫЙ МОБИЛЬНЫЙ ДИЗАЙН
+   ============================================ */
+
+/* Глобальные стили для предотвращения горизонтального скролла */
+.step-3-container {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.step-3-container > * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* Компактный toast о создании задачи (скрыт на десктопе) */
+.step-3-job-toast {
+  display: none;
+}
+
+.step-3-job-toast-close {
+  background: transparent;
+  border: none;
+  color: #22543d;
+  cursor: pointer;
+  font-size: 1.25rem;
+  line-height: 1;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.7;
+  transition: opacity 0.2s;
+}
+
+.step-3-job-toast-close:hover {
+  opacity: 1;
+}
+
+/* Название канала одной строкой */
+.step-3-channel-name {
+  font-size: 0.9rem;
+  color: #4a5568;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+/* Кнопка "Назад" */
+.step-3-back-button {
+  margin-bottom: 0.75rem !important;
+  padding: 0.5rem 1rem !important;
+  font-size: 0.875rem !important;
+  min-height: 40px !important;
+}
+
+/* Кнопки копирования в одной строке */
+.step-3-copy-buttons {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.step-3-copy-button {
+  flex: 1;
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.75rem !important;
+  min-height: 40px !important;
+  margin: 0 !important;
+}
+
+/* Основная кнопка генерации */
+.step-3-generate-button {
+  width: 100%;
+  margin-bottom: 0.75rem !important;
+  padding: 0.75rem 1rem !important;
+  font-size: 0.9rem !important;
+  min-height: 44px !important;
+  margin-right: 0 !important;
+}
+
+/* Группа промпта */
+.step-3-prompt-group {
+  margin-bottom: 1rem;
+}
+
+.step-3-prompt-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.step-3-prompt-toggle {
+  background: transparent;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  text-decoration: underline;
+  flex-shrink: 0;
+}
+
+.step-3-prompt-toggle:hover {
+  color: #5568d3;
+}
+
+.step-3-prompt-textarea {
+  max-width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+}
+
+.step-3-title-group {
+  margin-bottom: 0.75rem;
+}
+
+/* Мобильные стили для шага 3 */
+@media (max-width: 768px) {
+  .card h2 {
+    font-size: 1.1rem;
+    margin-bottom: 0.75rem;
+    margin-top: 0;
+  }
+
+  .step-3-container {
+    padding: 0;
+  }
+
+  .step-3-back-button {
+    margin-bottom: 0.5rem !important;
+    padding: 0.5rem 0.875rem !important;
+    font-size: 0.8rem !important;
+    min-height: 38px !important;
+  }
+
+  .step-3-job-toast {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-3-channel-name {
+    font-size: 0.85rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-3-copy-buttons {
+    gap: 0.375rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-3-copy-button {
+    padding: 0.5rem 0.625rem !important;
+    font-size: 0.7rem !important;
+    min-height: 38px !important;
+  }
+
+  .step-3-generate-button {
+    padding: 0.625rem 0.875rem !important;
+    font-size: 0.85rem !important;
+    min-height: 42px !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .step-3-prompt-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .step-3-prompt-label {
+    font-size: 0.85rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .step-3-prompt-toggle {
+    font-size: 0.7rem;
+  }
+
+  .step-3-prompt-content--collapsed {
+    display: none;
+  }
+
+  .step-3-prompt-textarea {
+    font-size: 0.875rem;
+    padding: 0.625rem;
+    min-height: 120px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .step-3-title-group {
+    margin-bottom: 0.5rem;
+  }
+
+  .step-3-title-group label {
+    font-size: 0.85rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .step-3-title-group input {
+    padding: 0.625rem;
+    font-size: 0.875rem;
+    min-height: 40px;
+  }
+
+  /* Скрываем десктопные кнопки на мобильном */
+  .video-generation-actions {
+    display: none;
+  }
+
+  /* Показываем toast на мобильном */
+  .step-3-job-toast {
+    display: flex !important;
+  }
+
+  /* Скрываем десктопный блок на мобильном (показываем только toast) */
+  .step-3-job-desktop {
+    display: none !important;
+  }
+
+  /* Компактные отступы для input-group */
+  .input-group {
+    margin-bottom: 0.75rem;
+  }
+
+  .input-group label {
+    font-size: 0.85rem;
+    margin-bottom: 0.375rem;
+  }
+
+  /* Уменьшаем отступы для степпера */
+  .steps-progress {
+    margin-bottom: 0.75rem;
+    padding: 0.75rem 0.5rem;
+  }
+
+  /* Скрываем блок с выбранной идеей на мобильном (слишком много места) */
+  .step-3-container > div[style*="background: #f7fafc"] {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .card h2 {
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .step-3-back-button {
+    padding: 0.5rem 0.75rem !important;
+    font-size: 0.75rem !important;
+    min-height: 36px !important;
+  }
+
+  .step-3-job-toast {
+    padding: 0.5rem 0.625rem;
+    font-size: 0.75rem;
+  }
+
+  .step-3-channel-name {
+    font-size: 0.8rem;
+  }
+
+  .step-3-copy-button {
+    padding: 0.5rem 0.5rem !important;
+    font-size: 0.65rem !important;
+    min-height: 36px !important;
+  }
+
+  .step-3-generate-button {
+    padding: 0.625rem 0.75rem !important;
+    font-size: 0.8rem !important;
+    min-height: 40px !important;
+  }
+
+  .step-3-prompt-label {
+    font-size: 0.8rem;
+  }
+
+  .step-3-prompt-toggle {
+    font-size: 0.65rem;
+  }
+
+  .step-3-prompt-textarea {
+    font-size: 0.8rem;
+    padding: 0.5rem;
+    min-height: 100px;
+  }
+}
+
