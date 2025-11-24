@@ -3517,6 +3517,39 @@
   line-height: 1;
 }
 
+/* Оптимизация для 4 кнопок на мобильных */
+@media (max-width: 768px) {
+  .mobile-actions-bar__button {
+    padding: 10px 6px;
+    font-size: 12px;
+    gap: 3px;
+  }
+  
+  .mobile-actions-bar__text {
+    font-size: 12px;
+  }
+  
+  .mobile-actions-bar__icon {
+    font-size: 14px;
+  }
+  
+  /* Для очень маленьких экранов - ещё более компактно */
+  @media (max-width: 480px) {
+    .mobile-actions-bar__button {
+      padding: 8px 4px;
+      font-size: 11px;
+    }
+    
+    .mobile-actions-bar__text {
+      font-size: 11px;
+    }
+    
+    .mobile-actions-bar__icon {
+      font-size: 13px;
+    }
+  }
+}
+
 /* Старые стили для совместимости */
 .step-3-sticky-footer {
   display: none;

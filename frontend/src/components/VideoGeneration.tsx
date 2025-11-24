@@ -300,6 +300,11 @@ const VideoGeneration: React.FC = () => {
     }
   }
 
+  // Обработчик для перехода в Telegram-бот
+  const handleGoToBots = () => {
+    window.open('https://t.me/syntxaibot', '_blank', 'noopener,noreferrer')
+  }
+
   
   // Храним предыдущее состояние задач для отслеживания изменений статусов
   const previousJobsRef = useRef<Map<string, VideoJobStatus>>(new Map())
@@ -2017,6 +2022,13 @@ const VideoGeneration: React.FC = () => {
               disabled: loading || !veoPrompt.trim() || activeJobsCount >= maxActiveJobs,
               variant: 'primary',
               loading: loading
+            },
+            {
+              id: 'go-to-bots',
+              icon: '🤖',
+              text: 'Перейти в боты',
+              onClick: handleGoToBots,
+              variant: 'secondary'
             }
           ]}
         />
