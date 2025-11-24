@@ -721,18 +721,21 @@
   }
 
   /* Скрываем десктопные кнопки на мобильных */
-  .step-2-actions-desktop {
+  .step-2-actions-desktop,
+  .step-3-copy-buttons-desktop,
+  .step-3-generate-button-desktop,
+  .video-generation-actions {
     display: none !important;
   }
 
   /* Добавляем отступ снизу для контента */
-  .step-3-container,
-  .step-2-container {
+  .step-2-container,
+  .step-3-container {
     padding-bottom: 88px !important; /* Высота панели + запас */
   }
 
   .app-main {
-    padding-bottom: 88px; /* Для других страниц где может быть панель */
+    padding-bottom: 0; /* Убираем глобальный отступ */
   }
 
   /* Минималистичная шапка */

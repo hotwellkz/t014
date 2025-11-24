@@ -1317,7 +1317,7 @@ const VideoGeneration: React.FC = () => {
 
       {/* Шаг 2: Генерация идей */}
       {step === 2 && selectedChannel && (
-        <div>
+        <div className="step-2-container">
           <button
             className="button button-secondary"
             onClick={() => {
@@ -1736,29 +1736,32 @@ const VideoGeneration: React.FC = () => {
               </button>
             </div>
           </div>
-          {/* Мобильная панель действий для шага 2 */}
-          <MobileActionsBar
-            buttons={[
-              {
-                id: 'voice-idea',
-                icon: '🎤',
-                text: 'Своя идея',
-                onClick: handleStartVoiceInput,
-                disabled: generatingIdeas || generatingPrompt,
-                variant: 'secondary'
-              },
-              {
-                id: 'generate-ideas',
-                icon: '✨',
-                text: 'Генерировать',
-                onClick: handleGenerateIdeas,
-                disabled: generatingIdeas || generatingPrompt,
-                variant: 'primary',
-                loading: generatingIdeas
-              }
-            ]}
-          />
         </div>
+      )}
+
+      {/* Мобильная панель действий для шага 2 */}
+      {step === 2 && selectedChannel && (
+        <MobileActionsBar
+          buttons={[
+            {
+              id: 'voice-idea',
+              icon: '🎤',
+              text: 'Своя идея',
+              onClick: handleStartVoiceInput,
+              disabled: generatingIdeas || generatingPrompt,
+              variant: 'secondary'
+            },
+            {
+              id: 'generate-ideas',
+              icon: '✨',
+              text: 'Генерировать',
+              onClick: handleGenerateIdeas,
+              disabled: generatingIdeas || generatingPrompt,
+              variant: 'primary',
+              loading: generatingIdeas
+            }
+          ]}
+        />
       )}
 
       {/* Шаг 3: Промпт + генерация видео */}
@@ -1971,38 +1974,40 @@ const VideoGeneration: React.FC = () => {
             showChannelName={false}
           />
 
-          {/* Мобильная панель действий для шага 3 */}
-          <MobileActionsBar
-            buttons={[
-              {
-                id: 'copy-prompt',
-                icon: '📋',
-                text: 'Промпт',
-                onClick: handleCopyPrompt,
-                disabled: !veoPrompt.trim(),
-                variant: 'secondary'
-              },
-              {
-                id: 'copy-title',
-                icon: '📋',
-                text: 'Название',
-                onClick: handleCopyTitle,
-                disabled: !videoTitle.trim(),
-                variant: 'secondary'
-              },
-              {
-                id: 'generate-video',
-                icon: '🎬',
-                text: 'Сгенерировать',
-                onClick: handleGenerateVideo,
-                disabled: loading || !veoPrompt.trim() || activeJobsCount >= maxActiveJobs,
-                variant: 'primary',
-                loading: loading
-              }
-            ]}
-          />
-
         </div>
+      )}
+
+      {/* Мобильная панель действий для шага 3 */}
+      {step === 3 && selectedChannel && (
+        <MobileActionsBar
+          buttons={[
+            {
+              id: 'copy-prompt',
+              icon: '📋',
+              text: 'Промпт',
+              onClick: handleCopyPrompt,
+              disabled: !veoPrompt.trim(),
+              variant: 'secondary'
+            },
+            {
+              id: 'copy-title',
+              icon: '📋',
+              text: 'Название',
+              onClick: handleCopyTitle,
+              disabled: !videoTitle.trim(),
+              variant: 'secondary'
+            },
+            {
+              id: 'generate-video',
+              icon: '🎬',
+              text: 'Сгенерировать',
+              onClick: handleGenerateVideo,
+              disabled: loading || !veoPrompt.trim() || activeJobsCount >= maxActiveJobs,
+              variant: 'primary',
+              loading: loading
+            }
+          ]}
+        />
       )}
     </div>
   )
